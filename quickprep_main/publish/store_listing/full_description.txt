@@ -1,0 +1,58 @@
+⚡ QuickPrep: Master Tech & Coding Interviews
+
+Ace your upcoming software engineering and tech interviews with QuickPrep — the all-in-one preparation suite combining spaced repetition flashcards, hands-free audio commute mode, timed mock tests, and 1-page high-yield revision cheat sheets.
+
+Whether you are targeting Top Tech (FAANG), FinTech, Service MNCs (TCS, Infosys, Wipro), or high-growth startups, QuickPrep delivers focused, high-yield conceptual mastery without the burnout.
+
+=======================================================
+🌟 KEY FEATURES
+=======================================================
+
+🎴 3D FLIP FLASHCARDS WITH SYNTAX HIGHLIGHTING
+• Clean 3D card flips with code syntax highlighting for Dart, Python, Java, SQL, and C++.
+• Covers Data Structures & Algorithms (DSA), System Design, Core Python, Flutter & Dart, SQL & Databases, and Java & OOP.
+• Interviewer Deep-Dive Notes revealing underlying architectural tradeoffs, time/space complexity, and follow-up gotchas.
+
+🧠 LEITNER SPACED REPETITION & SMART BOOKMARKS
+• Scientifically engineered 5-tier Leitner Box memory system.
+• Cards you know well appear less frequently, while challenging concepts return automatically at the optimal forgetting curve.
+• Instant bookmarking to build your personalized pre-interview cram list.
+
+🎧 HANDS-FREE AUDIO COMMUTE MODE
+• Turn travel time into productive study hours with our built-in Text-to-Speech playlist engine.
+• Automatically reads questions, pauses for reflection, reads answers, and advances to the next concept.
+• Adjustable playback speed (0.5x to 1.6x) with distraction-free audio player controls.
+
+📄 1-PAGE REVISION CHEAT SHEETS (PDF EXPORT)
+• Need to revise 15 minutes before your interview?
+• Export beautiful, high-density 1-page PDF cheat sheets summarizing critical formulas, code patterns, and core takeaways.
+• Print or share directly to your tablet or desktop.
+
+⏱️ TIMED MOCK TESTS & PERFORMANCE ANALYTICS
+• 45-second countdown quizzes simulating real technical screening pressure.
+• 4-option multiple-choice questions with instantaneous accuracy scoring.
+• Detailed question-by-question post-test breakdown with interviewer rationale.
+
+🏢 COMPANY-SPECIFIC INTERVIEW PACKS
+• One-tap filters for:
+  - FAANG / Top Product Firms (Algorithmic depth, system scalability, concurrency)
+  - FinTech (ACID properties, low-latency queues, B+ Tree indexing)
+  - Service MNCs (OOP fundamentals, Java lifecycle, SQL joins)
+  - High-Growth Startups (Practical full-stack development & microservices)
+
+🔥 GAMIFICATION & DAILY STREAKS
+• Build consistent daily study habits with our Streak Tracker.
+• Streak-Freeze capability ensures a busy day never wipes out your hard-earned streak.
+• Earn XP for every flashcard reviewed and mock test conquered.
+
+=======================================================
+💎 QUICKPREP PRO LIFETIME LICENSE
+=======================================================
+• 100% Ad-Free experience forever
+• Unlimited 1-page PDF cheat sheet exports without ads
+• Unlimited Audio Commute Mode
+• Full access to all current and future Company-Specific Packs
+
+Made with ❤️ by Apoorv
+Contact & Feedback: apoorvgupta1709
+Version: 1.0.0
