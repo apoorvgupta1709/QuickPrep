@@ -1,0 +1,73 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+class AdminTheme {
+  static const Color primary = Color(0xFF6366F1); // Indigo
+  static const Color primaryLight = Color(0xFF818CF8);
+  static const Color primaryDark = Color(0xFF4F46E5);
+  static const Color secondary = Color(0xFF06B6D4); // Cyan
+  static const Color accent = Color(0xFFF59E0B);
+  static const Color success = Color(0xFF10B981);
+  static const Color error = Color(0xFFEF4444);
+
+  static const Color darkBackground = Color(0xFF0F172A); // Slate 900
+  static const Color darkSurface = Color(0xFF1E293B); // Slate 800
+  static const Color darkSurfaceElevated = Color(0xFF334155); // Slate 700
+  static const Color darkTextPrimary = Color(0xFFF8FAFC);
+  static const Color darkTextSecondary = Color(0xFF94A3B8);
+
+  static ThemeData get darkTheme {
+    final base = ThemeData(
+      brightness: Brightness.dark,
+      colorScheme: const ColorScheme.dark(
+        primary: primary,
+        secondary: secondary,
+        surface: darkSurface,
+        error: error,
+      ),
+    );
+
+    return base.copyWith(
+      scaffoldBackgroundColor: darkBackground,
+      textTheme: base.textTheme.apply(
+        fontFamily: GoogleFonts.inter().fontFamily,
+        bodyColor: darkTextPrimary,
+        displayColor: darkTextPrimary,
+      ),
+      cardTheme: CardThemeData(
+        color: darkSurface,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFF334155), width: 1),
+        ),
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: darkSurface,
+        foregroundColor: darkTextPrimary,
+        elevation: 0,
+      ),
+      navigationRailTheme: const NavigationRailThemeData(
+        backgroundColor: darkSurface,
+        selectedIconTheme: IconThemeData(color: primaryLight),
+        unselectedIconTheme: IconThemeData(color: darkTextSecondary),
+        selectedLabelTextStyle: TextStyle(
+          color: primaryLight,
+          fontWeight: FontWeight.bold,
+        ),
+        unselectedLabelTextStyle: TextStyle(color: darkTextSecondary),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primary,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          textStyle: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
+  }
+}
