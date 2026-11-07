@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_gamification_provider.dart';
+import '../providers/monetization_provider.dart';
+import '../services/razorpay_service.dart';
+import '../services/admob_service.dart';
 import '../widgets/branding_footer.dart';
 import '../core/constants.dart';
 import '../core/theme.dart';
@@ -11,6 +14,7 @@ class SettingsAboutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gamification = Provider.of<UserGamificationProvider>(context);
+    final monetization = Provider.of<MonetizationProvider>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -36,6 +40,13 @@ class SettingsAboutScreen extends StatelessWidget {
                     ],
                   ),
                   borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF6366F1).withAlpha(50),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -61,7 +72,7 @@ class SettingsAboutScreen extends StatelessWidget {
                     Text(
                       gamification.isPro
                           ? 'You have lifetime ad-free access, unlimited PDF downloads, and full company packs.'
-                          : 'Unlock 100% Ad-Free experience, unlimited PDF revision cheat sheets, and full company interview packs.',
+                          : monetization.promoBannerText,
                       style: const TextStyle(color: Colors.white70, fontSize: 13),
                     ),
                     const SizedBox(height: 14),
@@ -72,15 +83,47 @@ class SettingsAboutScreen extends StatelessWidget {
                           foregroundColor: const Color(0xFF6366F1),
                         ),
                         onPressed: () {
-                          _showProUpgradeDialog(context);
+                          RazorpayService(context, gamification).openCheckout(
+                            amountInr: monetization.proPriceInr,
+                            razorpayKeyId: monetization.config.razorpayKeyId,
+                          );
                         },
-                        child: const Text('Unlock for ₹199 (Lifetime)'),
+                        child: Text(
+                          'Unlock for ₹${monetization.proPriceInr} (Lifetime)',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 14),
+
+              // Restore Purchases Button
+              Center(
+                child: TextButton.icon(
+                  onPressed: () async {
+                    final restored = await RazorpayService.restorePurchases(gamification);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            restored
+                                ? 'QuickPrep Pro License restored successfully! 🎉'
+                                : 'No prior Pro purchases found on this device.',
+                          ),
+                          backgroundColor:
+                              restored ? AppTheme.success : Colors.blueGrey,
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.restore, size: 16),
+                  label: const Text('Restore Purchases'),
+                ),
+              ),
+
+              const SizedBox(height: 20),
 
               Text(
                 'Gamification & Streaks',
@@ -108,10 +151,38 @@ class SettingsAboutScreen extends StatelessWidget {
                       leading: const Icon(Icons.ac_unit, color: Colors.cyan),
                       title: const Text('Streak Freezes Available'),
                       subtitle: const Text('Protects streak if you miss a day'),
-                      trailing: Text(
-                        '${gamification.streakFreezeCount}',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 14),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '${gamification.streakFreezeCount}',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.add_circle_outline, color: Colors.cyan, size: 20),
+                            tooltip: 'Replenish Streak Freeze (Watch Ad)',
+                            onPressed: () {
+                              AdMobService.showRewardedAd(
+                                isPro: gamification.isPro,
+                                config: monetization.config,
+                                onUserEarnedReward: (reward) {
+                                  gamification.addStreakFreeze(1);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('❄️ +1 Streak Freeze Added! Your streak is protected.'),
+                                      backgroundColor: AppTheme.success,
+                                    ),
+                                  );
+                                },
+                                onFailedOrUnavailable: () {
+                                  gamification.addStreakFreeze(1);
+                                },
+                              );
+                            },
+                          ),
+                        ],
                       ),
                     ),
                     const Divider(height: 1),
@@ -145,7 +216,7 @@ class SettingsAboutScreen extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 32,
-                        backgroundColor: AppTheme.primary.withOpacity(0.18),
+                        backgroundColor: AppTheme.primary.withAlpha(45),
                         child: const Icon(Icons.person,
                             size: 36, color: AppTheme.primaryLight),
                       ),
@@ -170,7 +241,7 @@ class SettingsAboutScreen extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.1),
+                          color: Colors.red.withAlpha(25),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: const Text(
@@ -206,44 +277,6 @@ class SettingsAboutScreen extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  void _showProUpgradeDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.workspace_premium, color: Colors.amber),
-            SizedBox(width: 8),
-            Text('QuickPrep Pro'),
-          ],
-        ),
-        content: const Text(
-          'In Phase 4, the Razorpay integration will process live checkout for ₹199.\n\nWould you like to activate Pro mode for testing now?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Provider.of<UserGamificationProvider>(context, listen: false)
-                  .setProStatus(true);
-              Navigator.of(ctx).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('QuickPrep Pro Lifetime Activated! 🎉'),
-                  backgroundColor: AppTheme.success,
-                ),
-              );
-            },
-            child: const Text('Activate Pro Mode'),
-          ),
-        ],
       ),
     );
   }

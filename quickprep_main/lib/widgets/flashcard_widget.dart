@@ -8,6 +8,9 @@ import '../models/question_model.dart';
 import '../providers/question_provider.dart';
 import '../providers/audio_commute_provider.dart';
 import '../providers/leitner_provider.dart';
+import '../providers/user_gamification_provider.dart';
+import '../providers/monetization_provider.dart';
+import '../services/admob_service.dart';
 import '../core/theme.dart';
 import 'report_issue_dialog.dart';
 
@@ -32,6 +35,7 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
   late AnimationController _animController;
   late Animation<double> _animation;
   bool _isFront = true;
+  bool _isDeepDiveRevealed = false;
 
   @override
   void initState() {
@@ -51,6 +55,7 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
     if (oldWidget.question.id != widget.question.id) {
       // Reset flip state when question changes
       _isFront = true;
+      _isDeepDiveRevealed = false;
       _animController.reset();
     }
   }
@@ -387,44 +392,85 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
                       const SizedBox(height: 16),
 
                       if (widget.question.deepDiveExplanation.isNotEmpty) ...[
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? AppTheme.darkSurfaceElevated
-                                : Colors.blueGrey.shade50,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isDark
-                                  ? Colors.white10
-                                  : Colors.black.withOpacity(0.06),
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Row(
+                        Builder(
+                          builder: (ctx) {
+                            final gamification =
+                                Provider.of<UserGamificationProvider>(ctx);
+                            final monetization =
+                                Provider.of<MonetizationProvider>(ctx);
+                            final canView =
+                                gamification.isPro || _isDeepDiveRevealed;
+
+                            return Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? AppTheme.darkSurfaceElevated
+                                    : Colors.blueGrey.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isDark
+                                      ? Colors.white10
+                                      : Colors.black.withAlpha(15),
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Icon(Icons.lightbulb_outline,
-                                      size: 16, color: Colors.amber),
-                                  SizedBox(width: 6),
-                                  Text(
-                                    'Interviewer Deep-Dive Notes',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                      color: Colors.amber,
-                                    ),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.lightbulb_outline,
+                                          size: 16, color: Colors.amber),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        canView
+                                            ? 'Interviewer Deep-Dive Notes'
+                                            : 'Interviewer Deep-Dive (Locked)',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                          color: Colors.amber,
+                                        ),
+                                      ),
+                                    ],
                                   ),
+                                  const SizedBox(height: 6),
+                                  if (canView)
+                                    Text(
+                                      widget.question.deepDiveExplanation,
+                                      style: const TextStyle(fontSize: 12.5),
+                                    )
+                                  else ...[
+                                    const Text(
+                                      'Unlock advanced interview notes and edge cases by watching a quick sponsored video or upgrading to Pro.',
+                                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                        backgroundColor: Colors.amber.shade700,
+                                      ),
+                                      onPressed: () {
+                                        AdMobService.showRewardedAd(
+                                          isPro: gamification.isPro,
+                                          config: monetization.config,
+                                          onUserEarnedReward: (reward) {
+                                            setState(() => _isDeepDiveRevealed = true);
+                                          },
+                                          onFailedOrUnavailable: () {
+                                            setState(() => _isDeepDiveRevealed = true);
+                                          },
+                                        );
+                                      },
+                                      icon: const Icon(Icons.lock_open, size: 14),
+                                      label: const Text('Watch Ad to Reveal Notes', style: TextStyle(fontSize: 11)),
+                                    ),
+                                  ],
                                 ],
                               ),
-                              const SizedBox(height: 6),
-                              Text(
-                                widget.question.deepDiveExplanation,
-                                style: const TextStyle(fontSize: 12.5),
-                              ),
-                            ],
-                          ),
+                            );
+                          },
                         ),
                       ],
                     ],

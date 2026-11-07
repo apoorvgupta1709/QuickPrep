@@ -5,7 +5,10 @@ import '../models/question_model.dart';
 import '../models/quiz_result_model.dart';
 import '../providers/question_provider.dart';
 import '../providers/user_gamification_provider.dart';
+import '../providers/monetization_provider.dart';
+import '../services/admob_service.dart';
 import '../widgets/branding_footer.dart';
+import '../widgets/admob_banner_widget.dart';
 import '../core/constants.dart';
 import '../core/theme.dart';
 
@@ -144,6 +147,16 @@ class _MockTestScreenState extends State<MockTestScreen> {
     final earnedXp = (_score * AppConstants.xpPerQuizCorrect) +
         AppConstants.xpQuizComplete;
     gamification.addXp(earnedXp);
+
+    final monetization =
+        Provider.of<MonetizationProvider>(context, listen: false);
+
+    if (monetization.shouldShowInterstitial()) {
+      AdMobService.showInterstitial(
+        isPro: gamification.isPro,
+        config: monetization.config,
+      );
+    }
 
     setState(() {
       _quizCompleted = true;
@@ -356,6 +369,7 @@ class _MockTestScreenState extends State<MockTestScreen> {
                 ),
               ),
 
+            const AdMobBannerWidget(),
             const BrandingFooter(isSubtle: true),
           ],
         ),

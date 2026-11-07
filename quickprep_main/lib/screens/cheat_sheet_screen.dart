@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/category_model.dart';
 import '../providers/question_provider.dart';
+import '../providers/user_gamification_provider.dart';
+import '../providers/monetization_provider.dart';
 import '../services/pdf_export_service.dart';
+import '../services/admob_service.dart';
+import '../services/razorpay_service.dart';
 import '../widgets/branding_footer.dart';
+import '../widgets/admob_banner_widget.dart';
 import '../core/theme.dart';
 
 class CheatSheetScreen extends StatefulWidget {
@@ -17,9 +22,125 @@ class _CheatSheetScreenState extends State<CheatSheetScreen> {
   Category? _selectedCategory;
   bool _isExporting = false;
 
+  void _downloadPdf(List questions) async {
+    if (_selectedCategory == null) return;
+    setState(() => _isExporting = true);
+    try {
+      await PdfExportService.printOrShareCheatSheet(
+        category: _selectedCategory!,
+        questions: questions.cast(),
+      );
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
+  }
+
+  void _showFreeUserPdfUnlockDialog(
+    UserGamificationProvider gamification,
+    MonetizationProvider monetization,
+    List questions,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.picture_as_pdf, color: AppTheme.primary),
+            SizedBox(width: 8),
+            Text('Export Cheat Sheet'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'PDF revision cheat sheets can be unlocked in two ways:',
+              style: TextStyle(fontSize: 13.5),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber.withAlpha(30),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.video_library, color: Colors.amber),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Watch 1 short sponsored ad to export this PDF for free.',
+                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withAlpha(30),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.workspace_premium, color: AppTheme.primaryLight),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Or upgrade to Pro (₹${monetization.proPriceInr} Lifetime) for 100% ad-free instant downloads.',
+                      style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          OutlinedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              AdMobService.showRewardedAd(
+                isPro: gamification.isPro,
+                config: monetization.config,
+                onUserEarnedReward: (reward) {
+                  _downloadPdf(questions);
+                },
+                onFailedOrUnavailable: () {
+                  _downloadPdf(questions);
+                },
+              );
+            },
+            child: const Text('Watch Ad to Export'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              RazorpayService(context, gamification).openCheckout(
+                amountInr: monetization.proPriceInr,
+                razorpayKeyId: monetization.config.razorpayKeyId,
+              );
+            },
+            child: Text('Get Pro (₹${monetization.proPriceInr})'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final questionProvider = Provider.of<QuestionProvider>(context);
+    final gamification = Provider.of<UserGamificationProvider>(context);
+    final monetization = Provider.of<MonetizationProvider>(context);
     final categories = questionProvider.categories;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -89,16 +210,16 @@ class _CheatSheetScreenState extends State<CheatSheetScreen> {
                   ElevatedButton.icon(
                     onPressed: _isExporting
                         ? null
-                        : () async {
+                        : () {
                             if (_selectedCategory == null) return;
-                            setState(() => _isExporting = true);
-                            try {
-                              await PdfExportService.printOrShareCheatSheet(
-                                category: _selectedCategory!,
-                                questions: categoryQuestions.cast(),
+                            if (gamification.isPro) {
+                              _downloadPdf(categoryQuestions);
+                            } else {
+                              _showFreeUserPdfUnlockDialog(
+                                gamification,
+                                monetization,
+                                categoryQuestions,
                               );
-                            } finally {
-                              if (mounted) setState(() => _isExporting = false);
                             }
                           },
                     icon: _isExporting
@@ -111,7 +232,7 @@ class _CheatSheetScreenState extends State<CheatSheetScreen> {
                             ),
                           )
                         : const Icon(Icons.download, size: 18),
-                    label: const Text('Export PDF'),
+                    label: Text(gamification.isPro ? 'Export PDF' : 'Unlock PDF'),
                   ),
                 ],
               ),
@@ -138,7 +259,7 @@ class _CheatSheetScreenState extends State<CheatSheetScreen> {
                             children: [
                               CircleAvatar(
                                 radius: 12,
-                                backgroundColor: AppTheme.primary.withOpacity(0.15),
+                                backgroundColor: AppTheme.primary.withAlpha(35),
                                 child: Text(
                                   '${index + 1}',
                                   style: const TextStyle(
@@ -179,6 +300,7 @@ class _CheatSheetScreenState extends State<CheatSheetScreen> {
               ),
             ),
 
+            const AdMobBannerWidget(),
             const BrandingFooter(isSubtle: true),
           ],
         ),

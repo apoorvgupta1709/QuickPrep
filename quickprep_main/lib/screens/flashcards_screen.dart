@@ -7,6 +7,7 @@ import '../providers/user_gamification_provider.dart';
 import '../providers/audio_commute_provider.dart';
 import '../widgets/flashcard_widget.dart';
 import '../widgets/branding_footer.dart';
+import '../widgets/admob_banner_widget.dart';
 import '../core/constants.dart';
 import '../core/theme.dart';
 import 'commute_mode_screen.dart';
@@ -221,6 +222,7 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
               ),
             ),
 
+            const AdMobBannerWidget(),
             const BrandingFooter(isSubtle: true),
           ],
         ),
