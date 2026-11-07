@@ -26,22 +26,24 @@ class AppTheme {
   static const Color lightTextSecondary = Color(0xFF64748B);
 
   static ThemeData get darkTheme {
-    return ThemeData(
-      useMaterial3: true,
+    final base = ThemeData(
       brightness: Brightness.dark,
-      scaffoldBackgroundColor: darkBackground,
       colorScheme: const ColorScheme.dark(
         primary: primary,
         secondary: secondary,
         surface: darkSurface,
-        background: darkBackground,
         error: error,
       ),
-      textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme).apply(
+    );
+
+    return base.copyWith(
+      scaffoldBackgroundColor: darkBackground,
+      textTheme: base.textTheme.apply(
+        fontFamily: GoogleFonts.inter().fontFamily,
         bodyColor: darkTextPrimary,
         displayColor: darkTextPrimary,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: darkSurface,
         elevation: 0,
         shape: RoundedRectangleBorder(
@@ -80,25 +82,27 @@ class AppTheme {
   }
 
   static ThemeData get lightTheme {
-    return ThemeData(
-      useMaterial3: true,
+    final base = ThemeData(
       brightness: Brightness.light,
-      scaffoldBackgroundColor: lightBackground,
       colorScheme: const ColorScheme.light(
         primary: primary,
         secondary: secondary,
         surface: lightSurface,
-        background: lightBackground,
         error: error,
       ),
-      textTheme: GoogleFonts.interTextTheme(ThemeData.light().textTheme).apply(
+    );
+
+    return base.copyWith(
+      scaffoldBackgroundColor: lightBackground,
+      textTheme: base.textTheme.apply(
+        fontFamily: GoogleFonts.inter().fontFamily,
         bodyColor: lightTextPrimary,
         displayColor: lightTextPrimary,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: lightSurface,
         elevation: 2,
-        shadowColor: Colors.black.withOpacity(0.04),
+        shadowColor: Colors.black.withAlpha(10),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
