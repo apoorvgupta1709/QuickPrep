@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'core/constants.dart';
@@ -11,18 +12,19 @@ import 'providers/monetization_provider.dart';
 import 'services/admob_service.dart';
 import 'screens/splash_screen.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize AdMob Engine with test ID guard
-  await AdMobService.initialize();
 
   // Production-Ready Checklist Item 8: Custom error boundary (Zero red screens)
   ErrorWidget.builder = (FlutterErrorDetails errorDetails) {
     return CustomErrorWidget(errorDetails: errorDetails);
   };
 
+  // Launch UI immediately so the first frame renders instantly without cold-boot blocking
   runApp(const QuickPrepApp());
+
+  // Initialize AdMob Engine in the background asynchronously
+  unawaited(AdMobService.initialize());
 }
 
 class QuickPrepApp extends StatelessWidget {
