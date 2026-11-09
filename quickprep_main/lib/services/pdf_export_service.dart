@@ -183,7 +183,7 @@ class PdfExportService {
                     style: pw.TextStyle(fontSize: 8, color: textMuted),
                   ),
                   pw.Text(
-                    AppConstants.brandingFooter,
+                    'QuickPrep Interview Revision Sheet',
                     style: pw.TextStyle(
                       fontSize: 8,
                       fontWeight: pw.FontWeight.bold,

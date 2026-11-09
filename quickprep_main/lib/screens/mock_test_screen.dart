@@ -370,7 +370,6 @@ class _MockTestScreenState extends State<MockTestScreen> {
               ),
 
             const AdMobBannerWidget(),
-            const BrandingFooter(isSubtle: true),
           ],
         ),
       ),
@@ -537,8 +536,6 @@ class _MockTestScreenState extends State<MockTestScreen> {
                   child: const Text('Back to Dashboard'),
                 ),
               ),
-
-              const BrandingFooter(),
             ],
           ),
         ),

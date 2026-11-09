@@ -172,8 +172,6 @@ class LeitnerScreen extends StatelessWidget {
                       color: AppTheme.success,
                       isDark: isDark,
                     ),
-
-                    const BrandingFooter(),
                   ],
                 ),
               ),
@@ -240,7 +238,6 @@ class LeitnerScreen extends StatelessWidget {
                             },
                           ),
                         ),
-                        const BrandingFooter(isSubtle: true),
                       ],
                     ),
                   ),

@@ -223,7 +223,6 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
             ),
 
             const AdMobBannerWidget(),
-            const BrandingFooter(isSubtle: true),
           ],
         ),
       ),

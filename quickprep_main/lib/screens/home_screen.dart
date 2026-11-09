@@ -3,8 +3,8 @@ import 'package:provider/provider.dart';
 import '../providers/question_provider.dart';
 import '../providers/user_gamification_provider.dart';
 import '../providers/leitner_provider.dart';
+import '../providers/user_profile_provider.dart';
 import '../widgets/xp_streak_badge.dart';
-import '../widgets/branding_footer.dart';
 import '../core/constants.dart';
 import '../core/theme.dart';
 import 'flashcards_screen.dart';
@@ -13,6 +13,7 @@ import 'commute_mode_screen.dart';
 import 'cheat_sheet_screen.dart';
 import 'leitner_screen.dart';
 import 'settings_about_screen.dart';
+import 'onboarding_profile_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -22,11 +23,17 @@ class HomeScreen extends StatelessWidget {
     final questionProvider = Provider.of<QuestionProvider>(context);
     final gamification = Provider.of<UserGamificationProvider>(context);
     final leitner = Provider.of<LeitnerProvider>(context);
+    final profileProvider = Provider.of<UserProfileProvider>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final categories = questionProvider.categories;
-    final filteredCount = questionProvider.filteredQuestions.length;
-    final dueCount = leitner.getDueQuestions(questionProvider.allQuestions).length;
+    final allCategories = questionProvider.categories;
+    final displayedCategories =
+        profileProvider.filterCategories(allCategories);
+    final displayedQuestions =
+        profileProvider.filterQuestions(questionProvider.filteredQuestions);
+    final filteredCount = displayedQuestions.length;
+    final dueCount =
+        leitner.getDueQuestions(questionProvider.allQuestions).length;
 
     return Scaffold(
       appBar: AppBar(
@@ -45,9 +52,9 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            Text(
+            const Text(
               AppConstants.appName,
-              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20),
+              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20),
             ),
           ],
         ),
@@ -55,6 +62,7 @@ class HomeScreen extends StatelessWidget {
           const XpStreakBadge(),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Settings & Career Track',
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const SettingsAboutScreen()),
@@ -71,11 +79,17 @@ class HomeScreen extends StatelessWidget {
           },
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Daily Streak & Leitner Reminder Banner
+                // 1. Personalized Career Track Card
+                _buildCareerTrackCard(context, profileProvider, isDark),
+
+                const SizedBox(height: 14),
+
+                // 2. Daily Streak & Leitner Reminder Banner
                 _buildHeroStreakBanner(
                   context,
                   streak: gamification.currentStreak,
@@ -86,7 +100,7 @@ class HomeScreen extends StatelessWidget {
 
                 const SizedBox(height: 16),
 
-                // Search Bar
+                // 3. Search Bar
                 TextField(
                   onChanged: (val) => questionProvider.setSearchQuery(val),
                   decoration: InputDecoration(
@@ -106,33 +120,66 @@ class HomeScreen extends StatelessWidget {
 
                 const SizedBox(height: 16),
 
-                // Company-Specific Filter Chips
-                Text(
-                  'Company-Specific Interview Packs',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.2,
-                      ),
+                // 4. Personalized Filter Segmented Bar
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Prep Topics',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    Row(
+                      children: [
+                        ChoiceChip(
+                          avatar: const Icon(Icons.filter_list, size: 14),
+                          label: Text(
+                            profileProvider.filterByTrackOnly
+                                ? '${profileProvider.profile.profession} (Filtered)'
+                                : 'All Topics',
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                          selected: profileProvider.filterByTrackOnly,
+                          selectedColor: AppTheme.primary,
+                          labelStyle: TextStyle(
+                            color: profileProvider.filterByTrackOnly
+                                ? Colors.white
+                                : null,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          onSelected: (val) {
+                            profileProvider.toggleFilterByTrack(val);
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
+
                 const SizedBox(height: 8),
 
+                // Company-Specific Filter Chips
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   physics: const BouncingScrollPhysics(),
                   child: Row(
                     children: [
                       _buildCompanyFilterChip(context, 'All', questionProvider),
-                      _buildCompanyFilterChip(context, 'FAANG', questionProvider),
+                      _buildCompanyFilterChip(
+                          context, 'FAANG', questionProvider),
                       _buildCompanyFilterChip(context, 'MNC', questionProvider),
-                      _buildCompanyFilterChip(context, 'FinTech', questionProvider),
-                      _buildCompanyFilterChip(context, 'Startup', questionProvider),
+                      _buildCompanyFilterChip(
+                          context, 'FinTech', questionProvider),
+                      _buildCompanyFilterChip(
+                          context, 'Startup', questionProvider),
                     ],
                   ),
                 ),
 
                 const SizedBox(height: 18),
 
-                // Fast Study Launchpad (Grid of 4 Key Actions)
+                // Prep Modes Grid
                 Text(
                   'Prep Modes ($filteredCount Questions Available)',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -152,7 +199,7 @@ class HomeScreen extends StatelessWidget {
                     _buildModeCard(
                       context,
                       title: 'Flashcards',
-                      subtitle: 'Flip & Spaced Repetition',
+                      subtitle: 'Active Recall & Spaced Review',
                       icon: Icons.style_outlined,
                       color: AppTheme.primary,
                       onTap: () {
@@ -180,7 +227,7 @@ class HomeScreen extends StatelessWidget {
                     _buildModeCard(
                       context,
                       title: 'Commute Audio',
-                      subtitle: 'Hands-Free TTS Player',
+                      subtitle: 'Hands-Free Audio Player',
                       icon: Icons.headphones_outlined,
                       color: Colors.teal,
                       onTap: () {
@@ -193,8 +240,8 @@ class HomeScreen extends StatelessWidget {
                     ),
                     _buildModeCard(
                       context,
-                      title: 'Revision PDF',
-                      subtitle: '1-Page Cheat Sheets',
+                      title: 'Revision Sheet',
+                      subtitle: 'Printable Summaries',
                       icon: Icons.picture_as_pdf_outlined,
                       color: Colors.purple,
                       onTap: () {
@@ -208,108 +255,206 @@ class HomeScreen extends StatelessWidget {
                   ],
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
 
-                // Topics & Categories List
+                // Topics Header
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Browse by Topic',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      profileProvider.filterByTrackOnly
+                          ? 'Recommended for ${profileProvider.profile.profession}'
+                          : 'All Interview Topics',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
                     ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const LeitnerScreen(),
-                          ),
-                        );
-                      },
-                      child: const Text('Leitner Review 🧠'),
-                    ),
+                    if (questionProvider.selectedCategoryId != null)
+                      TextButton(
+                        onPressed: () =>
+                            questionProvider.selectCategory(null),
+                        child: const Text('Show All',
+                            style: TextStyle(fontSize: 12)),
+                      ),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
 
-                ...categories.map((cat) {
-                  final catQuestions =
-                      questionProvider.getQuestionsByCategory(cat.id);
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 4),
-                      leading: CircleAvatar(
-                        backgroundColor: AppTheme.primary.withAlpha(30),
-                        child: Icon(
-                          _getCategoryIcon(cat.icon),
-                          color: AppTheme.primaryLight,
-                          size: 22,
+                // Category List
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: displayedCategories.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final cat = displayedCategories[index];
+                    final isSelected =
+                        questionProvider.selectedCategoryId == cat.id;
+
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppTheme.darkSurface
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isSelected
+                              ? AppTheme.primary
+                              : (isDark ? Colors.white12 : Colors.black12),
+                          width: isSelected ? 2 : 1,
                         ),
                       ),
-                      title: Text(
-                        cat.name,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 14.5),
-                      ),
-                      subtitle: Text(
-                        cat.description,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark
-                              ? AppTheme.darkTextSecondary
-                              : AppTheme.lightTextSecondary,
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor:
+                              AppTheme.primary.withAlpha(35),
+                          child: Icon(
+                            _getCategoryIcon(cat.icon),
+                            color: AppTheme.primaryLight,
+                            size: 20,
+                          ),
                         ),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? AppTheme.darkSurfaceElevated
-                                  : Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              '${catQuestions.length} Qs',
-                              style: const TextStyle(
-                                  fontSize: 11, fontWeight: FontWeight.bold),
-                            ),
+                        title: Text(
+                          cat.name,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: isSelected ? AppTheme.primaryLight : null,
                           ),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.chevron_right, size: 20),
-                        ],
-                      ),
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => FlashcardsScreen(
-                              initialQuestions: catQuestions,
-                              title: cat.name,
-                            ),
+                        ),
+                        subtitle: Text(
+                          cat.description,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark
+                                ? AppTheme.darkTextSecondary
+                                : AppTheme.lightTextSecondary,
                           ),
-                        );
-                      },
-                    ),
-                  );
-                }),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? AppTheme.darkSurfaceElevated
+                                    : Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '${cat.questionCount} Qs',
+                                style: const TextStyle(
+                                    fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.chevron_right, size: 18),
+                          ],
+                        ),
+                        onTap: () {
+                          questionProvider.selectCategory(
+                            isSelected ? null : cat.id,
+                          );
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const FlashcardsScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
 
-                const SizedBox(height: 12),
-
-                // Signature Branding Footer
-                const BrandingFooter(),
+                const SizedBox(height: 32),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildCareerTrackCard(
+    BuildContext context,
+    UserProfileProvider profileProvider,
+    bool isDark,
+  ) {
+    final profile = profileProvider.profile;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkSurface : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.primary.withAlpha(60),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primary.withAlpha(20),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withAlpha(35),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.school, color: AppTheme.primaryLight, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  profile.profession,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${profile.experienceLevel} • ${profile.targetCompanyTier}',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              foregroundColor: AppTheme.primaryLight,
+            ),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      const OnboardingProfileScreen(isEditingFromSettings: true),
+                ),
+              );
+            },
+            child: const Text('Change',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
   }
@@ -323,100 +468,135 @@ class HomeScreen extends StatelessWidget {
   }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            AppTheme.primaryDark,
-            AppTheme.primary,
-          ],
+          colors: isDark
+              ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
+              : [const Color(0xFFEEF2FF), Colors.white],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primary.withOpacity(0.25),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE0E7FF),
+        ),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.local_fire_department,
-                  color: Colors.amberAccent, size: 26),
-              const SizedBox(width: 8),
-              Text(
-                '$streak-Day Streak Active!',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.deepOrange.withAlpha(35),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.local_fire_department,
+                    color: Colors.deepOrange, size: 28),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$streak Day Practice Streak! 🔥',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      freezeCount > 0
+                          ? '$freezeCount streak freeze active • Streak protected'
+                          : 'Review today to keep your streak alive',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark
+                            ? AppTheme.darkTextSecondary
+                            : AppTheme.lightTextSecondary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const Spacer(),
-              if (freezeCount > 0)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.ac_unit, color: Colors.white, size: 12),
-                      const SizedBox(width: 4),
-                      Text(
-                        '$freezeCount Freeze',
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                ),
+              IconButton(
+                icon: const Icon(Icons.style, color: Colors.amber),
+                tooltip: 'Spaced Repetition Deck',
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const LeitnerScreen(),
+                    ),
+                  );
+                },
+              ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            dueCardsCount > 0
-                ? 'You have $dueCardsCount cards waiting in your spaced repetition queue.'
-                : 'All caught up on reviews! Practice a timed quiz to earn bonus XP.',
-            style: const TextStyle(color: Colors.white70, fontSize: 13),
-          ),
+          if (dueCardsCount > 0) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.amber.withAlpha(25),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.alarm, size: 14, color: Colors.amber),
+                  const SizedBox(width: 6),
+                  Text(
+                    '$dueCardsCount cards due for spaced review today',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.amber,
+                    ),
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const LeitnerScreen(),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'Review Now →',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.amber,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
   Widget _buildCompanyFilterChip(
-    BuildContext context,
-    String tag,
-    QuestionProvider provider,
-  ) {
-    final isSelected = provider.selectedCompanyFilter == tag;
+      BuildContext context, String company, QuestionProvider provider) {
+    final isSelected = provider.selectedCompanyFilter == company;
     return Padding(
       padding: const EdgeInsets.only(right: 8.0),
-      child: FilterChip(
-        label: Text(
-          tag == 'All'
-              ? 'All Companies'
-              : tag == 'MNC'
-                  ? 'MNCs (TCS/Infy)'
-                  : tag,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
+      child: ChoiceChip(
+        label: Text(company),
         selected: isSelected,
-        onSelected: (_) => provider.setCompanyFilter(tag),
+        onSelected: (_) => provider.setCompanyFilter(company),
+        selectedColor: AppTheme.primary,
+        labelStyle: TextStyle(
+          color: isSelected ? Colors.white : null,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          fontSize: 12,
+        ),
       ),
     );
   }
@@ -431,41 +611,42 @@ class HomeScreen extends StatelessWidget {
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Card(
+    return Material(
+      color: isDark ? AppTheme.darkSurface : Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      elevation: 0,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(14.0),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+            ),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: color.withOpacity(0.15),
-                child: Icon(icon, size: 20, color: color),
+              Icon(icon, color: color, size: 24),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13.5,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark
-                          ? AppTheme.darkTextSecondary
-                          : AppTheme.lightTextSecondary,
-                    ),
-                  ),
-                ],
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 10.5,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -476,20 +657,20 @@ class HomeScreen extends StatelessWidget {
 
   IconData _getCategoryIcon(String iconName) {
     switch (iconName) {
-      case 'account_tree':
-        return Icons.account_tree_outlined;
-      case 'flutter_dash':
-        return Icons.flutter_dash_outlined;
+      case 'code':
+        return Icons.code;
       case 'terminal':
-        return Icons.terminal_outlined;
+        return Icons.terminal;
       case 'dns':
-        return Icons.dns_outlined;
+        return Icons.dns;
       case 'storage':
-        return Icons.storage_outlined;
+        return Icons.storage;
       case 'coffee':
-        return Icons.coffee_outlined;
+        return Icons.coffee;
+      case 'smartphone':
+        return Icons.phone_android;
       default:
-        return Icons.code_outlined;
+        return Icons.menu_book;
     }
   }
 }

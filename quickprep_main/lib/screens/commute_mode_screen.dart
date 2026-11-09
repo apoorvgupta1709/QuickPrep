@@ -245,8 +245,6 @@ class CommuteModeScreen extends StatelessWidget {
               ),
 
               const SizedBox(height: 8),
-
-              const BrandingFooter(isSubtle: true),
             ],
           ),
         ),

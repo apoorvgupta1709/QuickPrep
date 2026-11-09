@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../core/constants.dart';
 import '../core/theme.dart';
+import '../providers/user_profile_provider.dart';
 import 'home_screen.dart';
+import 'onboarding_profile_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -21,10 +24,10 @@ class _SplashScreenState extends State<SplashScreen>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 1200),
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+    _scaleAnimation = Tween<double>(begin: 0.85, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
     );
 
@@ -34,18 +37,24 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    // Navigate to HomeScreen after brief delay
-    Future.delayed(const Duration(milliseconds: 2000), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (context, anim, secAnim) => const HomeScreen(),
-            transitionsBuilder: (context, animation, secAnim, child) =>
-                FadeTransition(opacity: animation, child: child),
-            transitionDuration: const Duration(milliseconds: 400),
-          ),
-        );
-      }
+    // Navigate to appropriate screen after brief delay
+    Future.delayed(const Duration(milliseconds: 1600), () {
+      if (!mounted) return;
+      final profileProvider =
+          Provider.of<UserProfileProvider>(context, listen: false);
+
+      final nextScreen = profileProvider.isCompleted
+          ? const HomeScreen()
+          : const OnboardingProfileScreen();
+
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (context, anim, secAnim) => nextScreen,
+          transitionsBuilder: (context, animation, secAnim, child) =>
+              FadeTransition(opacity: animation, child: child),
+          transitionDuration: const Duration(milliseconds: 350),
+        ),
+      );
     });
   }
 
@@ -90,7 +99,7 @@ class _SplashScreenState extends State<SplashScreen>
                               borderRadius: BorderRadius.circular(28),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppTheme.primary.withOpacity(0.35),
+                                  color: AppTheme.primary.withAlpha(90),
                                   blurRadius: 24,
                                   offset: const Offset(0, 10),
                                 ),
@@ -133,22 +142,19 @@ class _SplashScreenState extends State<SplashScreen>
             ),
             const Spacer(),
 
-            // Signature Branding Footer
+            // Version Indicator (Branding removed per user instruction)
             Padding(
               padding: const EdgeInsets.only(bottom: 24.0),
-              child: Column(
-                children: [
-                  Text(
-                    AppConstants.brandingFooter,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isDark
-                          ? AppTheme.darkTextSecondary
-                          : AppTheme.lightTextSecondary,
-                    ),
-                  ),
-                ],
+              child: Text(
+                'v${AppConstants.appVersion}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
+                  letterSpacing: 0.5,
+                ),
               ),
             ),
           ],

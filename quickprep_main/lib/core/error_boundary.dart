@@ -57,9 +57,9 @@ class CustomErrorWidget extends StatelessWidget {
                   label: const Text('Return to Home'),
                 ),
                 const SizedBox(height: 32),
-                Text(
-                  AppConstants.brandingFooter,
-                  style: const TextStyle(
+                const Text(
+                  'QuickPrep Recovery System',
+                  style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey,
                   ),

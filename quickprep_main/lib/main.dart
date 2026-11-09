@@ -10,6 +10,7 @@ import 'providers/user_gamification_provider.dart';
 import 'providers/leitner_provider.dart';
 import 'providers/audio_commute_provider.dart';
 import 'providers/monetization_provider.dart';
+import 'providers/user_profile_provider.dart';
 import 'services/admob_service.dart';
 import 'screens/splash_screen.dart';
 
@@ -60,6 +61,7 @@ class QuickPrepApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => LeitnerProvider()),
         ChangeNotifierProvider(create: (_) => AudioCommuteProvider()),
         ChangeNotifierProvider(create: (_) => MonetizationProvider()),
+        ChangeNotifierProvider(create: (_) => UserProfileProvider()),
       ],
       child: MaterialApp(
         title: AppConstants.appName,

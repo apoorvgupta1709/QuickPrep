@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
 import 'package:flutter_highlight/themes/atom-one-dark.dart';
 import 'package:flutter_highlight/themes/github.dart';
@@ -36,13 +37,14 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
   late Animation<double> _animation;
   bool _isFront = true;
   bool _isDeepDiveRevealed = false;
+  bool _showHint = false;
 
   @override
   void initState() {
     super.initState();
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 380),
     );
     _animation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _animController, curve: Curves.easeInOut),
@@ -53,9 +55,9 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
   void didUpdateWidget(covariant FlashcardWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.question.id != widget.question.id) {
-      // Reset flip state when question changes
       _isFront = true;
       _isDeepDiveRevealed = false;
+      _showHint = false;
       _animController.reset();
     }
   }
@@ -75,11 +77,37 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
     _isFront = !_isFront;
   }
 
+  void _copyToClipboard(BuildContext context, String text, String label) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$label copied to clipboard! 📋'),
+        duration: const Duration(milliseconds: 1400),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppTheme.primaryDark,
+      ),
+    );
+  }
+
+  Color _getDifficultyColor(String diff) {
+    switch (diff.toLowerCase()) {
+      case 'easy':
+        return const Color(0xFF10B981); // Emerald
+      case 'medium':
+        return const Color(0xFFF59E0B); // Amber
+      case 'hard':
+        return const Color(0xFFEF4444); // Red
+      default:
+        return AppTheme.primary;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final questionProvider = Provider.of<QuestionProvider>(context);
     final leitnerProvider = Provider.of<LeitnerProvider>(context);
     final commuteProvider = Provider.of<AudioCommuteProvider>(context);
+    final gamification = Provider.of<UserGamificationProvider>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isBookmarked = questionProvider.isBookmarked(widget.question.id);
     final boxNum = leitnerProvider.getBoxForQuestion(widget.question.id);
@@ -114,6 +142,8 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
                     context,
                     isDark: isDark,
                     boxNumber: boxNum,
+                    gamification: gamification,
+                    leitnerProvider: leitnerProvider,
                     onReportIssue: () {
                       showDialog(
                         context: context,
@@ -139,11 +169,13 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
     required VoidCallback onBookmark,
     required VoidCallback onListen,
   }) {
+    final diffColor = _getDifficultyColor(widget.question.difficulty);
+
     return Card(
       elevation: 6,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(22),
         side: BorderSide(
           color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
           width: 1.5,
@@ -151,20 +183,20 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
       ),
       child: InkWell(
         onTap: _flipCard,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(22),
         child: Padding(
           padding: const EdgeInsets.all(20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top Bar: Category Pill + Leitner Box + Action Icons
+              // Top Bar: Category Pill + Difficulty Pill + Leitner Box + Action Buttons
               Row(
                 children: [
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppTheme.primary.withOpacity(0.15),
+                      color: AppTheme.primary.withAlpha(35),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -176,18 +208,35 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.amber.withOpacity(0.15),
+                      color: diffColor.withAlpha(35),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      widget.question.difficulty.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: diffColor,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withAlpha(35),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       'Box $boxNumber',
                       style: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 10,
                         fontWeight: FontWeight.bold,
                         color: Colors.amber,
                       ),
@@ -195,8 +244,16 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.volume_up_outlined, size: 20),
+                    icon: const Icon(Icons.copy_rounded, size: 18),
+                    tooltip: 'Copy Question',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => _copyToClipboard(
+                        context, widget.question.question, 'Question'),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.volume_up_outlined, size: 19),
                     tooltip: 'Listen Audio',
+                    visualDensity: VisualDensity.compact,
                     onPressed: onListen,
                   ),
                   IconButton(
@@ -206,6 +263,7 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
                       color: isBookmarked ? Colors.amber : null,
                     ),
                     tooltip: 'Bookmark',
+                    visualDensity: VisualDensity.compact,
                     onPressed: onBookmark,
                   ),
                 ],
@@ -232,14 +290,37 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
                       // Code Snippet Preview (if available)
                       if (widget.question.codeSnippet != null &&
                           widget.question.codeSnippet!.isNotEmpty) ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Code Reference (${widget.question.language ?? "code"}):',
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.copy, size: 14),
+                              tooltip: 'Copy Code',
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () => _copyToClipboard(
+                                context,
+                                widget.question.codeSnippet!,
+                                'Code Snippet',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
                         Container(
                           width: double.infinity,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: isDark
-                                  ? Colors.white12
-                                  : Colors.black.withOpacity(0.08),
+                              color: isDark ? Colors.white12 : Colors.black12,
                             ),
                           ),
                           clipBehavior: Clip.antiAlias,
@@ -258,22 +339,84 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
                       ],
 
                       // Company Tags
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 4,
-                        children: widget.question.companyTags.map((tag) {
-                          return Chip(
-                            label: Text(tag,
-                                style: const TextStyle(fontSize: 10)),
-                            padding: EdgeInsets.zero,
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
-                            backgroundColor: isDark
-                                ? AppTheme.darkSurfaceElevated
-                                : Colors.grey.shade200,
-                          );
-                        }).toList(),
-                      ),
+                      if (widget.question.companyTags.isNotEmpty) ...[
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: widget.question.companyTags.map((tag) {
+                            return Chip(
+                              avatar: const Icon(Icons.business, size: 12),
+                              label: Text(tag,
+                                  style: const TextStyle(fontSize: 10.5)),
+                              padding: EdgeInsets.zero,
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                              backgroundColor: isDark
+                                  ? AppTheme.darkSurfaceElevated
+                                  : Colors.grey.shade200,
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+
+                      // Hint / Clue Expander
+                      if (widget.question.deepDiveExplanation.isNotEmpty) ...[
+                        GestureDetector(
+                          onTap: () {
+                            setState(() => _showHint = !_showHint);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.withAlpha(25),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                  color: Colors.amber.withAlpha(60)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.lightbulb_outline,
+                                    size: 16, color: Colors.amber),
+                                const SizedBox(width: 6),
+                                Text(
+                                  _showHint
+                                      ? 'Hide Interview Hint'
+                                      : '💡 Need a Hint? (Tap here)',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.amber,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        if (_showHint) ...[
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? AppTheme.darkSurfaceElevated
+                                  : Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              'Focus on core trade-offs, time complexity, and internal memory/thread mechanics.',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontStyle: FontStyle.italic,
+                                color: isDark
+                                    ? AppTheme.darkTextSecondary
+                                    : AppTheme.lightTextSecondary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ],
                   ),
                 ),
@@ -298,6 +441,7 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
                       'Tap card to reveal answer & explanation',
                       style: TextStyle(
                         fontSize: 12,
+                        fontWeight: FontWeight.w500,
                         color: isDark
                             ? AppTheme.darkTextSecondary
                             : AppTheme.lightTextSecondary,
@@ -317,6 +461,8 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
     BuildContext context, {
     required bool isDark,
     required int boxNumber,
+    required UserGamificationProvider gamification,
+    required LeitnerProvider leitnerProvider,
     required VoidCallback onReportIssue,
     required VoidCallback onListen,
   }) {
@@ -324,7 +470,7 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
       elevation: 6,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(22),
         side: const BorderSide(
           color: AppTheme.primary,
           width: 1.5,
@@ -332,7 +478,7 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
       ),
       child: InkWell(
         onTap: _flipCard,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(22),
         child: Padding(
           padding: const EdgeInsets.all(20.0),
           child: Column(
@@ -345,7 +491,7 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppTheme.success.withOpacity(0.15),
+                      color: AppTheme.success.withAlpha(35),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Text(
@@ -359,14 +505,23 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.volume_up_outlined, size: 20),
+                    icon: const Icon(Icons.copy_rounded, size: 18),
+                    tooltip: 'Copy Answer',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => _copyToClipboard(
+                        context, widget.question.answer, 'Answer'),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.volume_up_outlined, size: 19),
                     tooltip: 'Listen Explanation',
+                    visualDensity: VisualDensity.compact,
                     onPressed: onListen,
                   ),
                   IconButton(
                     icon: const Icon(Icons.flag_outlined,
-                        size: 20, color: AppTheme.error),
+                        size: 19, color: AppTheme.error),
                     tooltip: 'Report Typo/Issue',
+                    visualDensity: VisualDensity.compact,
                     onPressed: onReportIssue,
                   ),
                 ],
@@ -394,8 +549,6 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
                       if (widget.question.deepDiveExplanation.isNotEmpty) ...[
                         Builder(
                           builder: (ctx) {
-                            final gamification =
-                                Provider.of<UserGamificationProvider>(ctx);
                             final monetization =
                                 Provider.of<MonetizationProvider>(ctx);
                             final canView =
@@ -409,9 +562,8 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
                                     : Colors.blueGrey.shade50,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: isDark
-                                      ? Colors.white10
-                                      : Colors.black.withAlpha(15),
+                                  color:
+                                      isDark ? Colors.white10 : Colors.black12,
                                 ),
                               ),
                               child: Column(
@@ -438,17 +590,20 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
                                   if (canView)
                                     Text(
                                       widget.question.deepDiveExplanation,
-                                      style: const TextStyle(fontSize: 12.5),
+                                      style: const TextStyle(
+                                          fontSize: 12.5, height: 1.35),
                                     )
                                   else ...[
                                     const Text(
-                                      'Unlock advanced interview notes and edge cases by watching a quick sponsored video or upgrading to Pro.',
-                                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                                      'Unlock advanced interview edge cases and system design trade-offs by watching a sponsored video or getting Pro.',
+                                      style: TextStyle(
+                                          fontSize: 12, color: Colors.grey),
                                     ),
                                     const SizedBox(height: 8),
                                     ElevatedButton.icon(
                                       style: ElevatedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 14, vertical: 8),
                                         backgroundColor: Colors.amber.shade700,
                                       ),
                                       onPressed: () {
@@ -456,15 +611,20 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
                                           isPro: gamification.isPro,
                                           config: monetization.config,
                                           onUserEarnedReward: (reward) {
-                                            setState(() => _isDeepDiveRevealed = true);
+                                            setState(() =>
+                                                _isDeepDiveRevealed = true);
                                           },
                                           onFailedOrUnavailable: () {
-                                            setState(() => _isDeepDiveRevealed = true);
+                                            setState(() =>
+                                                _isDeepDiveRevealed = true);
                                           },
                                         );
                                       },
-                                      icon: const Icon(Icons.lock_open, size: 14),
-                                      label: const Text('Watch Ad to Reveal Notes', style: TextStyle(fontSize: 11)),
+                                      icon: const Icon(Icons.lock_open,
+                                          size: 14),
+                                      label: const Text(
+                                          'Watch Ad to Reveal Notes',
+                                          style: TextStyle(fontSize: 11)),
                                     ),
                                   ],
                                 ],
@@ -478,18 +638,78 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
                 ),
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
-              Center(
-                child: Text(
-                  'Tap to flip back to question',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark
-                        ? AppTheme.darkTextSecondary
-                        : AppTheme.lightTextSecondary,
-                  ),
+              // Active Recall Rating Bar: Spaced Repetition Feedback
+              Text(
+                'How well did you know this? (Spaced Repetition)',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
                 ),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        foregroundColor: AppTheme.error,
+                        side: const BorderSide(color: AppTheme.error),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () {
+                        leitnerProvider.rateCard(widget.question.id, false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                'Card reset to Box 1 for rapid review. 🔄'),
+                            duration: Duration(milliseconds: 1200),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                        if (widget.onNext != null) widget.onNext!();
+                      },
+                      child: const Text('🔴 Again',
+                          style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        backgroundColor: AppTheme.success,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () {
+                        leitnerProvider.rateCard(widget.question.id, true);
+                        gamification.addXp(10);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                'Mastered! +10 XP • Moved to next Leitner Box 🎉'),
+                            backgroundColor: AppTheme.success,
+                            duration: Duration(milliseconds: 1200),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                        if (widget.onNext != null) widget.onNext!();
+                      },
+                      child: const Text('🟢 Mastered (+10 XP)',
+                          style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

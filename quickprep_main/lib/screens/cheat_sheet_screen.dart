@@ -301,7 +301,6 @@ class _CheatSheetScreenState extends State<CheatSheetScreen> {
             ),
 
             const AdMobBannerWidget(),
-            const BrandingFooter(isSubtle: true),
           ],
         ),
       ),

@@ -12,9 +12,9 @@ class SeedData {
         ),
         Category(
           id: 'flutter_dart',
-          name: 'Flutter & Dart',
-          icon: 'flutter_dash',
-          description: 'Widgets, State Lifecycle, Isolates & Event Loop',
+          name: 'Mobile Architecture',
+          icon: 'smartphone',
+          description: 'Client Lifecycle, Thread Isolates & Reactive UI',
           questionCount: 6,
         ),
         Category(
@@ -209,7 +209,7 @@ swap(arr, pivotIndex, high);''',
         Question(
           id: 'flt_1',
           categoryId: 'flutter_dart',
-          categoryName: 'Flutter & Dart',
+          categoryName: 'Mobile Architecture',
           question: 'What is the role of the Dart Event Loop and Microtask Queue?',
           answer: 'Dart runs on a single thread. The Event Loop processes events from two queues: Microtask Queue (high priority, e.g., scheduleMicrotask) and Event Queue (I/O, timers, user taps, Futures). Microtasks drain completely before the next event runs.',
           codeSnippet: '''print('1');
@@ -232,7 +232,7 @@ print('4');
         Question(
           id: 'flt_2',
           categoryId: 'flutter_dart',
-          categoryName: 'Flutter & Dart',
+          categoryName: 'Mobile Architecture',
           question: 'Explain the three trees in Flutter: Widget, Element, and RenderObject.',
           answer: 'Widgets are lightweight immutable configurations. Elements are the persistent lifecycle nodes managing state and tree identity. RenderObjects handle painting, layout measurements, and hit testing.',
           codeSnippet: '''// Widget (Config) -> Element (Lifecycle) -> RenderObject (Paint/Layout)
@@ -255,7 +255,7 @@ class MyBox extends StatelessWidget {
         Question(
           id: 'flt_3',
           categoryId: 'flutter_dart',
-          categoryName: 'Flutter & Dart',
+          categoryName: 'Mobile Architecture',
           question: 'What is a Dart Isolate and when should you use one?',
           answer: 'An Isolate is Dart\'s concurrent execution unit with its own private heap memory and event loop. They do not share memory; they communicate solely via message passing (SendPort/ReceivePort). Use Isolates for heavy CPU tasks like JSON parsing large payloads or image processing.',
           codeSnippet: '''// Running expensive calculation off the UI thread
@@ -277,7 +277,7 @@ final result = await Isolate.run(() {
         Question(
           id: 'flt_4',
           categoryId: 'flutter_dart',
-          categoryName: 'Flutter & Dart',
+          categoryName: 'Mobile Architecture',
           question: 'Why should you use "const" constructors whenever possible in Flutter?',
           answer: 'Const constructors create compile-time canonicalized instances. Flutter\'s reconciliation skips rebuilding const widget subtrees during setState calls, preserving CPU cycles and maintaining 60/120 FPS.',
           codeSnippet: '''// Rebuilt on every parent setState:
@@ -300,7 +300,7 @@ const Widget good = Padding(padding: EdgeInsets.all(8.0), child: Text('Hi'));'''
         Question(
           id: 'flt_5',
           categoryId: 'flutter_dart',
-          categoryName: 'Flutter & Dart',
+          categoryName: 'Mobile Architecture',
           question: 'What is the purpose of BuildContext in Flutter?',
           answer: 'BuildContext is a handle to the location of a widget in the widget tree. It provides access to InheritedWidgets (Theme, MediaQuery, Navigator) and defines the element hierarchy.',
           codeSnippet: '''// Looking up inherited theme from the widget tree
@@ -321,7 +321,7 @@ final screenWidth = MediaQuery.of(context).size.width;''',
         Question(
           id: 'flt_6',
           categoryId: 'flutter_dart',
-          categoryName: 'Flutter & Dart',
+          categoryName: 'Mobile Architecture',
           question: 'What is the lifecycle sequence of a StatefulWidget in Flutter?',
           answer: 'createState() -> initState() -> didChangeDependencies() -> build() -> didUpdateWidget() -> deactivate() -> dispose().',
           codeSnippet: '''@override
