@@ -14,15 +14,17 @@ class LeitnerProvider extends ChangeNotifier {
   }
 
   Future<void> _loadCards() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonStr = prefs.getString('quickprep_leitner_cards');
-    if (jsonStr != null) {
-      try {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonStr = prefs.getString('quickprep_leitner_cards');
+      if (jsonStr != null) {
         final Map<String, dynamic> decoded = jsonDecode(jsonStr);
         decoded.forEach((key, val) {
           _cards[key] = LeitnerCard.fromJson(val);
         });
-      } catch (_) {}
+      }
+    } catch (e) {
+      debugPrint('LeitnerProvider loadCards warning: $e');
     }
     notifyListeners();
   }

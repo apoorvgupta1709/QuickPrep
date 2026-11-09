@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 enum TtsState { playing, paused, stopped }
 
 class AudioTtsService {
-  final FlutterTts _flutterTts = FlutterTts();
+  FlutterTts? _flutterTts;
   TtsState _state = TtsState.stopped;
   double _speechRate = 0.5; // standard natural rate
   final double _pitch = 1.0;
@@ -21,75 +23,89 @@ class AudioTtsService {
   }
 
   void _initTts() async {
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
+      return;
+    }
     try {
-      await _flutterTts.setLanguage('en-US');
-      await _flutterTts.setSpeechRate(_speechRate);
-      await _flutterTts.setPitch(_pitch);
+      _flutterTts = FlutterTts();
+      await _flutterTts!.setLanguage('en-US');
+      await _flutterTts!.setSpeechRate(_speechRate);
+      await _flutterTts!.setPitch(_pitch);
 
-      _flutterTts.setStartHandler(() {
+      _flutterTts!.setStartHandler(() {
         _state = TtsState.playing;
-        _stateController.add(_state);
+        if (!_stateController.isClosed) _stateController.add(_state);
       });
 
-      _flutterTts.setCompletionHandler(() {
+      _flutterTts!.setCompletionHandler(() {
         _state = TtsState.stopped;
-        _stateController.add(_state);
+        if (!_stateController.isClosed) _stateController.add(_state);
       });
 
-      _flutterTts.setPauseHandler(() {
+      _flutterTts!.setPauseHandler(() {
         _state = TtsState.paused;
-        _stateController.add(_state);
+        if (!_stateController.isClosed) _stateController.add(_state);
       });
 
-      _flutterTts.setContinueHandler(() {
+      _flutterTts!.setContinueHandler(() {
         _state = TtsState.playing;
-        _stateController.add(_state);
+        if (!_stateController.isClosed) _stateController.add(_state);
       });
 
-      _flutterTts.setErrorHandler((msg) {
+      _flutterTts!.setErrorHandler((msg) {
         _state = TtsState.stopped;
-        _stateController.add(_state);
+        if (!_stateController.isClosed) _stateController.add(_state);
       });
-    } catch (_) {
-      // Graceful fallback on unsupported platforms / testing
+    } catch (e) {
+      debugPrint('TTS initialization fallback: $e');
     }
   }
 
   Future<void> setSpeechRate(double rate) async {
     _speechRate = rate;
     try {
-      await _flutterTts.setSpeechRate(rate);
+      if (_flutterTts != null) {
+        await _flutterTts!.setSpeechRate(rate);
+      }
     } catch (_) {}
   }
 
   Future<void> speak(String text) async {
+    if (text.isEmpty) return;
     try {
-      await _flutterTts.stop();
-      await _flutterTts.speak(text);
-    } catch (_) {}
-  }
-
-  Future<void> speakCard(String question, String answer) async {
-    final speechText = "Question: $question. Answer: $answer";
-    await speak(speechText);
+      if (_flutterTts != null) {
+        _state = TtsState.playing;
+        if (!_stateController.isClosed) _stateController.add(_state);
+        await _flutterTts!.speak(text);
+      }
+    } catch (_) {
+      _state = TtsState.stopped;
+      if (!_stateController.isClosed) _stateController.add(_state);
+    }
   }
 
   Future<void> pause() async {
     try {
-      await _flutterTts.pause();
+      if (_flutterTts != null) {
+        await _flutterTts!.pause();
+        _state = TtsState.paused;
+        if (!_stateController.isClosed) _stateController.add(_state);
+      }
     } catch (_) {}
   }
 
   Future<void> stop() async {
     try {
-      await _flutterTts.stop();
-      _state = TtsState.stopped;
-      _stateController.add(_state);
+      if (_flutterTts != null) {
+        await _flutterTts!.stop();
+        _state = TtsState.stopped;
+        if (!_stateController.isClosed) _stateController.add(_state);
+      }
     } catch (_) {}
   }
 
   void dispose() {
-    _flutterTts.stop();
+    stop();
     _stateController.close();
   }
 }

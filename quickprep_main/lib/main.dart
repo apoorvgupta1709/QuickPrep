@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'core/constants.dart';
@@ -13,18 +14,38 @@ import 'services/admob_service.dart';
 import 'screens/splash_screen.dart';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  // Production-Ready Checklist Item 8: Custom error boundary (Zero red screens)
-  ErrorWidget.builder = (FlutterErrorDetails errorDetails) {
-    return CustomErrorWidget(errorDetails: errorDetails);
-  };
+    // Production error logging: intercept all Flutter framework errors
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.presentError(details);
+      debugPrint('QuickPrep Framework Error: ${details.exceptionAsString()}');
+    };
 
-  // Launch UI immediately so the first frame renders instantly without cold-boot blocking
-  runApp(const QuickPrepApp());
+    // Intercept platform and asynchronous unhandled errors
+    PlatformDispatcher.instance.onError = (error, stack) {
+      debugPrint('QuickPrep Platform Error: $error\n$stack');
+      return true; // handled, prevent process crash
+    };
 
-  // Initialize AdMob Engine in the background asynchronously
-  unawaited(AdMobService.initialize());
+    // Custom graceful fallback UI for any widget failure
+    ErrorWidget.builder = (FlutterErrorDetails errorDetails) {
+      return CustomErrorWidget(errorDetails: errorDetails);
+    };
+
+    // Render app UI immediately
+    runApp(const QuickPrepApp());
+
+    // Safely initialize AdMob asynchronously without blocking launch
+    try {
+      unawaited(AdMobService.initialize());
+    } catch (e) {
+      debugPrint('AdMob startup notice: $e');
+    }
+  }, (error, stack) {
+    debugPrint('QuickPrep Zone Error: $error\n$stack');
+  });
 }
 
 class QuickPrepApp extends StatelessWidget {

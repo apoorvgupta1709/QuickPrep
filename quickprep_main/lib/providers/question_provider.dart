@@ -26,17 +26,17 @@ class QuestionProvider extends ChangeNotifier {
 
   Future<void> _loadData() async {
     _categories = SeedData.categories;
-    _questions = SeedData.questions;
+    _questions = List.from(SeedData.questions);
 
-    final prefs = await SharedPreferences.getInstance();
-    final savedBookmarks =
-        prefs.getStringList('quickprep_bookmarked_ids') ?? [];
-    _bookmarkedIds.addAll(savedBookmarks);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedBookmarks =
+          prefs.getStringList('quickprep_bookmarked_ids') ?? [];
+      _bookmarkedIds.addAll(savedBookmarks);
 
-    // If there are locally cached questions from admin bulk import or dynamic sync
-    final cachedQuestionsStr = prefs.getString('quickprep_custom_questions');
-    if (cachedQuestionsStr != null) {
-      try {
+      // If there are locally cached questions from admin bulk import or dynamic sync
+      final cachedQuestionsStr = prefs.getString('quickprep_custom_questions');
+      if (cachedQuestionsStr != null) {
         final List<dynamic> decoded = jsonDecode(cachedQuestionsStr);
         final customQuestions =
             decoded.map((e) => Question.fromJson(e)).toList();
@@ -47,7 +47,9 @@ class QuestionProvider extends ChangeNotifier {
             _questions.add(cq);
           }
         }
-      } catch (_) {}
+      }
+    } catch (e) {
+      debugPrint('QuestionProvider loadData warning: $e');
     }
 
     notifyListeners();

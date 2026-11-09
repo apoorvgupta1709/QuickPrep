@@ -20,18 +20,22 @@ class UserGamificationProvider extends ChangeNotifier {
   }
 
   Future<void> _loadState() async {
-    final prefs = await SharedPreferences.getInstance();
-    _currentStreak = prefs.getInt('quickprep_streak') ?? 1;
-    _streakFreezeCount = prefs.getInt('quickprep_freeze_count') ?? 1;
-    _xpScore = prefs.getInt('quickprep_xp') ?? 0;
-    _isPro = prefs.getBool('quickprep_is_pro') ?? false;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _currentStreak = prefs.getInt('quickprep_streak') ?? 1;
+      _streakFreezeCount = prefs.getInt('quickprep_freeze_count') ?? 1;
+      _xpScore = prefs.getInt('quickprep_xp') ?? 0;
+      _isPro = prefs.getBool('quickprep_is_pro') ?? false;
 
-    final lastActiveStr = prefs.getString('quickprep_last_active');
-    if (lastActiveStr != null) {
-      _lastActiveDate = DateTime.tryParse(lastActiveStr);
+      final lastActiveStr = prefs.getString('quickprep_last_active');
+      if (lastActiveStr != null) {
+        _lastActiveDate = DateTime.tryParse(lastActiveStr);
+      }
+
+      _evaluateDailyStreak();
+    } catch (e) {
+      debugPrint('UserGamificationProvider loadState warning: $e');
     }
-
-    _evaluateDailyStreak();
     notifyListeners();
   }
 
